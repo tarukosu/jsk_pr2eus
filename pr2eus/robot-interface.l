@@ -33,6 +33,7 @@
                 viewer groupname))
 
 (defmethod robot-interface
+  (:clock-cb (msg) nil)
   (:init
    (&rest args &key ((:robot r)) ((:objects objs)) (type :default-controller)
           (use-tf2) ((:groupname nh) "robot_multi_queue") ((:namespace ns))
@@ -55,7 +56,7 @@
    (ros::advertise visualization-topic visualization_msgs::MarkerArray 100)
    ;;
    (when (ros::get-param "use_sim_time" nil)
-     (ros::subscribe "/clock" rosgraph_msgs::Clock #'(lambda (msg)))
+     (ros::subscribe "/clock" rosgraph_msgs::Clock #'send self :clock-cb)
      (ros::ros-warn "/use_sim_time is TRUE, check if /clock is pusblished or not")
      (unix:sleep 1)
      (when (= (ros::get-num-publishers "/clock") 0)

@@ -1,0 +1,61 @@
+<launch>
+
+  <!-- start up empty world -->
+  <arg name="gui" default="true"/>
+  <arg name="throttled" default="false"/>
+  <arg name="paused" default="true"/>
+  <arg name="use_sim_time" default="true"/>
+
+
+  <!-- set use_sim_time flag -->
+  <group if="$(arg use_sim_time)">
+    <param name="/use_sim_time" value="true" />
+  </group>
+
+
+  <!-- start empty world -->
+  <group if="$(arg paused)">
+    <node name="gazebo" pkg="gazebo" type="gazebo" args="-u $(find hrpsys_gazebo_tutorials)/worlds/room73b2.world" respawn="false" output="screen">
+      <remap from="/head_mount_kinect/rgb/image_raw" to="/openni/rgb/image_raw"/>
+      <remap from="/head_mount_kinect/rgb/camera_info" to="/openni/rgb/camera_info"/>
+      <remap from="/head_mount_kinect/depth/image_raw" to="/openni/depth/image_raw"/>
+      <remap from="/head_mount_kinect/depth/camera_info" to="/openni/depth/camera_info"/>
+      <remap from="/head_mount_kinect/depth/points" to="/openni/depth/points"/>
+      <remap from="/head_mount_kinect/depth_registered/points" to="/openni/depth_registered/points"/>
+
+    </node>
+  </group>
+  <group unless="$(arg paused)">
+    <node name="gazebo" pkg="gazebo" type="gazebo" args="$(find hrpsys_gazebo_tutorials)/worlds/room73b2.world" respawn="false" output="screen"/>
+  </group>
+
+  <!-- start gui -->
+  <group if="$(arg gui)">
+    <node name="gazebo_gui" pkg="gazebo" type="gui" respawn="false" output="screen"/>
+  </group>
+
+  <!-- start pr2 robot -->
+
+  <include file="$(find pr2_gazebo)/launch/pr2.launch"/>
+
+  <!-- start openni -->
+  <include file="$(find openni_launch)/launch/openni.launch">
+    <arg name="camera" value="openni"/>
+    <arg name="load_driver" value="false"/>
+    <arg name="publish_tf" value="false"/>
+  </include>
+
+  <node pkg="nodelet" type="nodelet" name="throttle" output="screen"
+        args="load jsk_topic_tools/LightweightThrottle /openni_nodelet_manager">
+    <remap from="~input" to="/openni/depth_registered/points" />
+    <remap from="~output" to="/openni/depth_registered/points_throttle" />
+    <param name="update_rate" value="3.0" />
+  </node>
+
+  <node name="kinect_image_throttle" pkg="topic_tools" type="throttle"
+        args="messages /openni/rgb/image_rect_color/compressed 5.0" />
+
+
+  <node name="stop_projector" pkg="pr2eus_tutorials" type="stop_projection.sh"/>
+
+</launch>
